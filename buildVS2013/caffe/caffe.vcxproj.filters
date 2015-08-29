@@ -19,6 +19,9 @@
     <Filter Include="Source Files\util">
       <UniqueIdentifier>{a3103878-8de1-4de9-a8b8-5c03d799a29e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\proto">
+      <UniqueIdentifier>{3cb69462-87dd-454a-8802-81c4c7f2c06e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\caffe\blob.cpp">
@@ -242,6 +245,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\caffe\util\db_lmdb.cpp">
       <Filter>Source Files\util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\caffe\proto\caffe.pb.cc">
+      <Filter>Source Files\proto</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
