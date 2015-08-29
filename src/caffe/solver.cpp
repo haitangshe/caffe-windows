@@ -13,6 +13,10 @@
 
 namespace caffe {
 
+#ifdef _MSC_VER 
+#define snprintf sprintf_s 
+#endif
+
 template <typename Dtype>
 Solver<Dtype>::Solver(const SolverParameter& param)
     : net_() {
