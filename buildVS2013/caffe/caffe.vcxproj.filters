@@ -249,6 +249,9 @@
     <ClCompile Include="..\..\src\caffe\proto\caffe.pb.cc">
       <Filter>Source Files\proto</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tools\caffe.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="..\..\src\caffe\layers\absval_layer.cu">
