@@ -9,9 +9,6 @@
 
 namespace caffe {
 
-#define __builtin_popcount __popcnt 
-#define __builtin_popcountl __popcnt
-
 template<>
 void caffe_cpu_gemm<float>(const CBLAS_TRANSPOSE TransA,
     const CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,

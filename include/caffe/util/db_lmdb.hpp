@@ -7,11 +7,6 @@
 
 #include "caffe/util/db.hpp"
 
-#ifdef _MSC_VER
-#include <direct.h>
-#include <windows.h>
-#endif
-
 namespace caffe { namespace db {
 
 inline void MDB_CHECK(int mdb_status) {
@@ -41,10 +36,6 @@ class LMDBCursor : public Cursor {
 
  private:
   void Seek(MDB_cursor_op op) {
-#ifdef _MSC_VER
-	if (op != MDB_FIRST)
-	  VirtualUnlock(mdb_value_.mv_data, mdb_value_.mv_size);
-#endif
     int mdb_status = mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_, op);
     if (mdb_status == MDB_NOTFOUND) {
       valid_ = false;
