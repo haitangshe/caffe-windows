@@ -391,7 +391,76 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
+  
+  // Custom layer parameters (starts from 1000)
+  optional EltwiseAffineParameter eltwise_affine_param = 1000;
+  optional BNParameter bn_param = 1001;
+  optional ROIPoolingParameter roi_pooling_param = 1002;
+  optional ELUParameter elu_param = 1003;
+  optional LocalParameter local_param = 1004;
+  optional TripletLossParameter triplet_loss_param = 1005;
+  
 }
+
+//////////////////////////////////////////////////////////////
+//  Custom layer parameters
+
+// Message that stores parameters used by EltwiseAffineLayer
+message EltwiseAffineParameter {
+
+  // Initial value of a_i. Default is a_i=1.0 for all i.
+  optional FillerParameter slope_filler = 1;
+
+  optional FillerParameter bias_filler = 2;
+
+  // Whether or not slope paramters are shared across channels.
+  optional bool channel_shared = 3 [default = false];
+}
+
+// Message that stores parameters used by BNLayer
+message BNParameter {
+  optional FillerParameter scale_filler = 1; // The filler for the scale
+  optional FillerParameter shift_filler = 2; // The filler for the shift
+  optional float var_eps = 3 [default = 1e-10]; // The epsilon added to variance
+  optional bool moving_average = 4 [default = true]; // whether or not using moving average for inference
+  optional float decay = 5 [default = 0.95]; // The decay factor for moving average
+}
+
+// Message that stores parameters used by ROIPoolingLayer
+message ROIPoolingParameter {
+  // Pad, kernel size, and stride are all given as a single value for equal
+  // dimensions in height and width or as Y, X pairs.
+  optional uint32 pooled_h = 1 [default = 0]; // The pooled output height
+  optional uint32 pooled_w = 2 [default = 0]; // The pooled output width
+  // Multiplicative spatial scale factor to translate ROI coords from their
+  // input scale to the scale used when pooling
+  optional float spatial_scale = 3 [default = 1];
+}
+
+// Message that stores parameters used by ReLULayer
+message ELUParameter {
+  optional float alpha = 1 [default = 0];
+  optional bool symmetric_mode = 2 [default = false];
+}
+
+// Message that stores parameters used by LocalLayer
+message LocalParameter {
+  optional uint32 num_output = 1; // The number of outputs for the layer
+  optional bool bias_term = 2 [default = true]; // whether to have bias terms
+  optional uint32 pad = 3 [default = 0]; // The padding size
+  optional uint32 kernel_size = 4; // The kernel size
+  optional uint32 stride = 6 [default = 1]; // The stride
+  optional FillerParameter weight_filler = 7; // The filler for the weight
+  optional FillerParameter bias_filler = 8; // The filler for the bias
+}
+
+message TripletLossParameter {
+  //margin for negative triplet
+  optional float margin = 1 [default = 1.0];
+}
+
+// Custom layer parameters end
+//////////////////////////////////////////////////////////////
 
 // Message that stores parameters used to apply transformation
 // to the data layer's data
