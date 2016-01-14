@@ -7,8 +7,6 @@
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
 
-#include "caffe/layers/neuron_layer.hpp"
-
 namespace caffe {
 
 /**
@@ -20,7 +18,7 @@ namespace caffe {
  *        equal to 2. The 1st axis (0-based) is seen as channels.
  */
 template <typename Dtype>
-class ParametricLayer : public NeuronLayer<Dtype> {
+class ParametricLayer : public Layer<Dtype> {
  public:
   /**
    * @param param provides ParametricParameter parametric_param,
@@ -31,7 +29,7 @@ class ParametricLayer : public NeuronLayer<Dtype> {
    *     negative slopes are shared across channels.
    */
   explicit ParametricLayer(const LayerParameter& param)
-      : NeuronLayer<Dtype>(param) {}
+      : Layer<Dtype>(param) {}
 
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
@@ -40,6 +38,7 @@ class ParametricLayer : public NeuronLayer<Dtype> {
       const vector<Blob<Dtype>*>& top);
 
   virtual inline const char* type() const { return "Parametric"; }
+  virtual inline int ExactBottomBlobs() const { return 2; }
 
  protected:
   /**
