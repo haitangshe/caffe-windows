@@ -8,23 +8,32 @@ namespace caffe {
 // CUDA kernele for forward
 template <typename Dtype>
 __global__ void ParametricForward(const int n, const int channels, const int dim,
-    const Dtype* in, Dtype* out, const Dtype* slope_data,
+    const Dtype* in1, const Dtype* in2, Dtype* out, const Dtype* slope_data,
     const int div_factor) {
   CUDA_KERNEL_LOOP(index, n) {
     int c = (index / dim) % channels / div_factor;
-    out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[c];
+    out[index] = slope_data[c] * in1[index] + (Dtype(1.0)-slope_data[c]) * in2[index];
   }
 }
 
 // CUDA kernel for bottom backward
 template <typename Dtype>
-__global__ void ParametricBackward(const int n, const int channels, const int dim,
-    const Dtype* in_diff, const Dtype* in_data, Dtype* out_diff,
+__global__ void ParametricBackwardA(const int n, const int channels, const int dim,
+    const Dtype* in_diff, Dtype* out_diff,
     const Dtype* slope_data, const int div_factor) {
   CUDA_KERNEL_LOOP(index, n) {
     int c = (index / dim) % channels / div_factor;
-    out_diff[index] = in_diff[index] * ((in_data[index] > 0)
-        + (in_data[index] <= 0) * slope_data[c]);
+    out_diff[index] = in_diff[index] * slope_data[c];
+  }
+}
+
+template <typename Dtype>
+__global__ void ParametricBackwardB(const int n, const int channels, const int dim,
+    const Dtype* in_diff, Dtype* out_diff,
+    const Dtype* slope_data, const int div_factor) {
+  CUDA_KERNEL_LOOP(index, n) {
+    int c = (index / dim) % channels / div_factor;
+    out_diff[index] = in_diff[index] * (Dtype(1.0)-slope_data[c]);
   }
 }
 
@@ -32,12 +41,12 @@ __global__ void ParametricBackward(const int n, const int channels, const int di
 template <typename Dtype>
 __global__ void ParametricParamBackward(const int n,
     const int rows, const int rowPitch, const Dtype* in_diff,
-    const Dtype* in_data, Dtype* out_diff) {
+    const Dtype* in1_data, const Dtype* in2_data, Dtype* out_diff) {
   CUDA_KERNEL_LOOP(index, n) {
-    out_diff[index] = in_diff[index] * in_data[index] * (in_data[index] <= 0);
+    out_diff[index] = in_diff[index] * (in1_data[index] - in2_data[index]);
     for ( int k = 1; k < rows; k++ ) {
         out_diff[index] += in_diff[index + k*rowPitch]
-           * in_data[index + k*rowPitch] * (in_data[index + k*rowPitch] <= 0);
+           * (in1_data[index + k*rowPitch] - in2_data[index + k*rowPitch]);
     }
   }
 }
@@ -45,7 +54,8 @@ __global__ void ParametricParamBackward(const int n,
 template <typename Dtype>
 void ParametricLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
-  const Dtype* bottom_data = bottom[0]->gpu_data();
+  const Dtype* bottom_data_a = bottom[0]->gpu_data();
+  const Dtype* bottom_data_b = bottom[1]->gpu_data();
   Dtype* top_data = top[0]->mutable_gpu_data();
   const int count = bottom[0]->count();
   const int dim = bottom[0]->count(2);
@@ -55,12 +65,12 @@ void ParametricLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
 
   // For in-place computation
   if (top[0] == bottom[0]) {
-    caffe_copy(count, bottom_data, bottom_memory_.mutable_gpu_data());
+    // caffe_copy(count, bottom_data, bottom_memory_.mutable_gpu_data());
   }
 
   // NOLINT_NEXT_LINE(whitespace/operators)
   ParametricForward<Dtype><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
-      count, channels, dim, bottom_data, top_data, slope_data, div_factor);
+      count, channels, dim, bottom_data_a, bottom_data_b, top_data, slope_data, div_factor);
   CUDA_POST_KERNEL_CHECK;
 }
 
@@ -68,7 +78,8 @@ template <typename Dtype>
 void ParametricLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
-  const Dtype* bottom_data = bottom[0]->gpu_data();
+  const Dtype* bottom_data_a = bottom[0]->gpu_data();
+  const Dtype* bottom_data_b = bottom[1]->gpu_data();
   const Dtype* top_diff = top[0]->gpu_diff();
   const int count = bottom[0]->count();
   const int dim = bottom[0]->count(2);
@@ -76,7 +87,7 @@ void ParametricLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 
   // For in-place computation
   if (top[0] == bottom[0]) {
-    bottom_data = bottom_memory_.gpu_data();
+    // bottom_data = bottom_memory_.gpu_data();
   }
 
   // Propagate to param
@@ -92,7 +103,7 @@ void ParametricLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     ParametricParamBackward<Dtype><<<CAFFE_GET_BLOCKS(cdim),
       CAFFE_CUDA_NUM_THREADS>>>(
       cdim, bottom[0]->num(), top[0]->offset(1), top_diff ,
-      bottom_data ,
+      bottom_data_a, bottom_data_b,
       backward_buff_.mutable_gpu_diff());
     CUDA_POST_KERNEL_CHECK;
     if (channel_shared_) {
@@ -112,9 +123,20 @@ void ParametricLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const Dtype* slope_data = this->blobs_[0]->gpu_data();
     int div_factor = channel_shared_ ? channels : 1;
     // NOLINT_NEXT_LINE(whitespace/operators)
-    ParametricBackward<Dtype><<<CAFFE_GET_BLOCKS(count),
+    ParametricBackwardA<Dtype><<<CAFFE_GET_BLOCKS(count),
         CAFFE_CUDA_NUM_THREADS>>>(
-        count, channels, dim, top_diff, bottom_data, bottom_diff, slope_data,
+        count, channels, dim, top_diff, bottom_diff, slope_data,
+        div_factor);
+    CUDA_POST_KERNEL_CHECK;
+  }
+  if (propagate_down[1]) {
+    Dtype* bottom_diff = bottom[1]->mutable_gpu_diff();
+    const Dtype* slope_data = this->blobs_[0]->gpu_data();
+    int div_factor = channel_shared_ ? channels : 1;
+    // NOLINT_NEXT_LINE(whitespace/operators)
+    ParametricBackwardB<Dtype><<<CAFFE_GET_BLOCKS(count),
+        CAFFE_CUDA_NUM_THREADS>>>(
+        count, channels, dim, top_diff, bottom_diff, slope_data,
         div_factor);
     CUDA_POST_KERNEL_CHECK;
   }

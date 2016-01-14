@@ -90,8 +90,8 @@ class ParametricLayer : public Layer<Dtype> {
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
   bool channel_shared_;
-  Blob<Dtype> multiplier_;  // dot multiplier for backward computation of params
-  Blob<Dtype> backward_buff_;  // temporary buffer for backward computation
+  Blob<Dtype> multiplier_;  // dot multiplier for backward computation of params (for GPU)
+  Blob<Dtype> backward_buff_;  // temporary buffer for backward computation (for GPU)
   Blob<Dtype> bottom_memory_;  // memory for in-place computation
 };
 
