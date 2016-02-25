@@ -3,8 +3,6 @@
 #include <cmath>
 #include <cstdio>
 #include <ctime>
-#include <process.h>
-#include <boost/date_time.hpp>
 
 #include "caffe/common.hpp"
 #include "caffe/util/rng.hpp"
@@ -35,11 +33,7 @@ int64_t cluster_seedgen(void) {
   if (f)
     fclose(f);
 
-#ifndef _MSC_VER 
   pid = getpid();
-#else 
-  pid = _getpid();
-#endif
   s = time(NULL);
   seed = std::abs(((s * 181) * ((pid - 83) * 359)) % 104729);
   return seed;
@@ -52,24 +46,7 @@ void GlobalInit(int* pargc, char*** pargv) {
   // Google logging.
   ::google::InitGoogleLogging(*(pargv)[0]);
   // Provide a backtrace on segfault.
-  // ::google::InstallFailureSignalHandler();
-
-  // modified from caffe-happynear
-  std::string LOG_INFO_FILE;
-  std::string LOG_WARNING_FILE;
-  std::string LOG_ERROR_FILE;
-  std::string LOG_FATAL_FILE;
-  std::string now_time = boost::posix_time::to_iso_extended_string(boost::posix_time::second_clock::local_time());
-  now_time[13] = '-';
-  now_time[16] = '-';
-  LOG_INFO_FILE = now_time + ".INFO.log.txt";
-  google::SetLogDestination(google::GLOG_INFO, LOG_INFO_FILE.c_str());
-  LOG_WARNING_FILE = now_time + ".WARNING.log.txt";
-  google::SetLogDestination(google::GLOG_WARNING, LOG_WARNING_FILE.c_str());
-  LOG_ERROR_FILE = now_time + ".ERROR.log.txt";
-  google::SetLogDestination(google::GLOG_ERROR, LOG_ERROR_FILE.c_str());
-  LOG_FATAL_FILE = now_time + ".FATAL.log.txt";
-  google::SetLogDestination(google::GLOG_FATAL, LOG_FATAL_FILE.c_str());
+  ::google::InstallFailureSignalHandler();
 }
 
 #ifdef CPU_ONLY  // CPU-only Caffe.
