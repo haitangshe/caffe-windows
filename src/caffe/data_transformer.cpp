@@ -318,7 +318,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
         << "Currently resizing of input is only supported for 3 channel inputs";
     // and downsampling, Googlenet used random assortment of methods.
     cv::resize(cv_img, cv_resized_img,
-        cv::Size(img_resized_width, img_resized_height), CV_INTER_CUBIC);
+        cv::Size(img_resized_width, img_resized_height), CV_INTER_LINEAR);
   }
 
   int h_off = 0;
