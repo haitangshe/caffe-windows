@@ -251,7 +251,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   const bool has_min_size = param_.has_min_size();
   const bool has_max_size = param_.has_max_size();
   const int max_size = param_.max_size();
-  int min_size = param_.min_size();
+  const int min_size = param_.min_size();
 
   CHECK_GT(img_channels, 0);
   // CHECK_GE(img_height, crop_size);
@@ -266,7 +266,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   }
   if (has_mean_values) {
     CHECK(mean_values_.size() == 1 || mean_values_.size() == img_channels) <<
-     "Specify either 1 mean_value or as many as channels: " << img_channels;
+      "Specify either 1 mean_value or as many as channels: " << img_channels;
     if (img_channels > 1 && mean_values_.size() == 1) {
       // Replicate the mean_value for simplicity
       for (int c = 1; c < img_channels; ++c) {
@@ -275,50 +275,47 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
     }
   }
 
-  // if min_size is not set, set to crop_size
-  if (has_min_size) {
-    CHECK_GE(min_size, crop_size) << "Minimum image size much be >= crop_size";
-  } else {
-    min_size = crop_size;
-  }
-
   cv::Mat cv_resized_img = cv_img;
   int img_resized_width = img_width;
   int img_resized_height = img_height;
 
-  int resize_size = min_size;
-  // We do scale augmentation at TRAIN time only
-  // Handle 'scale' augmentation by randomly choosing a minimum image
-  // size to be cropped from, between [min_size, max_size], if
-  // max_size and min_size are set.
-  if (phase_ == TRAIN && has_max_size) {
-    CHECK_GE(max_size, min_size);
-    resize_size = min_size + Rand(max_size - min_size);
-  }
+  // if min_size is set, do the resize
+  if (has_min_size) {
+    CHECK_GE(min_size, crop_size) << "Minimum image size much be >= crop_size";
 
-  // if either of the sides of the image are less than crop size,
-  // enlarge to a given size_size >= crop_size
-  if (img_height < img_width && img_height < resize_size) {
-    // resize height so it is crop_size
-    img_resized_height = resize_size;
-    img_resized_width =
-        ceil(static_cast<float>(resize_size*img_width)/img_height);
-  } else if (img_width < resize_size) {
-    // resize width so it is crop_size
-    img_resized_width = resize_size;
-    img_resized_height =
-        ceil(static_cast<float>(resize_size*img_height)/img_width);
-  }
+    int resize_size = min_size;
+    // We do scale augmentation at TRAIN time only
+    // Handle 'scale' augmentation by randomly choosing a minimum image
+    // size to be cropped from, between [min_size, max_size], if
+    // max_size and min_size are set.
+    if (phase_ == TRAIN && has_max_size) {
+      CHECK_GE(max_size, min_size);
+      resize_size = min_size + Rand(max_size - min_size);
+    }
 
-  if (img_width != img_resized_width
+    // Resize the shorter edge to resize_size
+    if (img_height < img_width) {
+      // resize height so it is crop_size
+      img_resized_height = resize_size;
+      img_resized_width =
+        ceil(static_cast<float>(resize_size*img_width) / img_height);
+    } else {
+      // resize width so it is crop_size
+      img_resized_width = resize_size;
+      img_resized_height =
+        ceil(static_cast<float>(resize_size*img_height) / img_width);
+    }
+
+    if (img_width != img_resized_width
       || img_height != img_resized_height) {
-    // In practice Andrew Howard used CUBIC for both upsampling
-    // and downsampling, Googlenet used random assortment of methods.
-    CHECK_EQ(img_channels, 3)
+      // In practice Andrew Howard used CUBIC for both upsampling
+      // and downsampling, Googlenet used random assortment of methods.
+      CHECK_EQ(img_channels, 3)
         << "Currently resizing of input is only supported for 3 channel inputs";
-    // and downsampling, Googlenet used random assortment of methods.
-    cv::resize(cv_img, cv_resized_img,
+      // and downsampling, Googlenet used random assortment of methods.
+      cv::resize(cv_img, cv_resized_img,
         cv::Size(img_resized_width, img_resized_height), CV_INTER_LINEAR);
+    }
   }
 
   int h_off = 0;
