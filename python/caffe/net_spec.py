@@ -113,6 +113,14 @@ class Function(object):
         if 'in_place' in self.params:
             del self.params['in_place']
         self.tops = tuple(Top(self, n) for n in range(self.ntop))
+        if 'top' in self.params:
+            self._top_ind = 0
+            assert len(self.params['top']) == self.ntop
+            self._top_names = self.params['top']
+            del self.params['top'] # otherwise will repeat twice
+        if 'name' in self.params:
+            if not self.params['name']: # ignore None or ''
+                del self.params['name']
 
     def _get_name(self, names, autonames):
         if self not in names and self.ntop > 0:
@@ -124,8 +132,15 @@ class Function(object):
 
     def _get_top_name(self, top, names, autonames):
         if top not in names:
-            autonames[top.fn.type_name] += 1
-            names[top] = top.fn.type_name + str(autonames[top.fn.type_name])
+            # use 'top' or 'name' for top names first
+            if hasattr(self, '_top_names'):
+                names[top] = self._top_names[self._top_ind]
+                self._top_ind +=1
+            elif 'name' in self.params and self.params['name']:
+                names[top] = self.params['name'] # + '_output'
+            else:
+                autonames[top.fn.type_name] += 1
+                names[top] = top.fn.type_name + str(autonames[top.fn.type_name])
         return names[top]
 
     def _to_proto(self, layers, names, autonames):
