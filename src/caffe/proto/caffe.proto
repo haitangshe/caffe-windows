@@ -404,6 +404,7 @@ message LayerParameter {
   optional TripletLossParameter triplet_loss_param = 1005;
   optional NoiseParameter noise_param = 1006;
   optional ParametricParameter parametric_param = 1007;
+  optional OnehotParameter onehot_param = 1008;
 }
 
 //////////////////////////////////////////////////////////////
@@ -463,19 +464,22 @@ message TripletLossParameter {
   optional float margin = 1 [default = 1.0];
 }
 
-<<<<<<< HEAD
 message NoiseParameter {
   // This parameter must be set to specify the kind of noise to be generated.
   // Gaussian and Uniform noise are the only supported types.
   optional FillerParameter filler_param = 1;
-=======
-message ParametricParameter {
+}
 
+message ParametricParameter {
   // Initial value of a_i. Default is a_i=0.25 for all i.
   optional FillerParameter filler = 1;
   // Whether or not slope paramters are shared across channels.
   optional bool channel_shared = 2 [default = false];
->>>>>>> 96c632b... update caffe.proto for ParametricLayer
+}
+
+// Message that stores parameters used by OnehotLayer
+message OnehotParameter {
+  optional uint32 num_output = 1;
 }
 
 // Custom layer parameters end
